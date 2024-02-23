@@ -7,8 +7,17 @@ experiment = Experiment(
   workspace="rafalbuler"
 )
 
-env = gym.make("LunarLander-v2", render_mode="human")
-env = gym.wrappers.RecordVideo(env, 'rendered_videos', disable_logger=True)
+mode = 'offline'
+
+if mode == 'offline':
+    render_mode = 'human'
+    disable_logger = True
+elif mode == 'online':
+    render_mode = 'rgb_array'
+    disable_logger = False
+
+env = gym.make("LunarLander-v2", render_mode=render_mode)
+env = gym.wrappers.RecordVideo(env, 'rendered_videos', disable_logger=disable_logger)
 env = CometLogger(env, experiment)
 
 episodes = 2
