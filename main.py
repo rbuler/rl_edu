@@ -13,6 +13,7 @@ if mode == 'show-only':
     render_mode = 'human'
     env = gym.make("LunarLander-v2", render_mode=render_mode)
     env = CometLogger(env, experiment)
+    experiment.add_tag(mode)
 
 elif mode == 'save-only':
     render_mode = 'rgb_array'
@@ -20,9 +21,9 @@ elif mode == 'save-only':
     env = gym.make("LunarLander-v2", render_mode=render_mode)
     env = gym.wrappers.RecordVideo(env, 'rendered_videos', disable_logger=disable_logger)
     env = CometLogger(env, experiment)
+    experiment.add_tag(mode)
 
-
-episodes = 2
+episodes = 5
 
 for _ in range(episodes):
     observation, info = env.reset(seed=42)
