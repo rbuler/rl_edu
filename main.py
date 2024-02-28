@@ -25,7 +25,10 @@ elif mode == 'save-only':
 
 episodes = 5
 
-for _ in range(episodes):
+test_metric = 0
+experiment.log_metric ('test_int', test_metric)
+
+for e in range(episodes):
     observation, info = env.reset(seed=42)
     truncated = False
     terminated = False
@@ -33,5 +36,9 @@ for _ in range(episodes):
         action = env.action_space.sample()
         observation, reward, terminated, truncated, info = env.step(action)
         env.render()
+
+    test_metric = e
+    experiment.log_metric ('test_int', test_metric)
+
 
 env.close()
