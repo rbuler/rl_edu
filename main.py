@@ -1,6 +1,8 @@
 import gymnasium as gym
 from comet_ml import Experiment
 from comet_ml.integration.gymnasium import CometLogger
+# from utils import *
+
 
 experiment = Experiment(
   project_name="rl-edu",
@@ -27,6 +29,8 @@ episodes = 5
 
 test_metric = 0
 experiment.log_metric ('test_int', test_metric)
+
+# generate_trajectory(env=env, pi=None, max_steps=1000)
 
 for e in range(episodes):
     observation, info = env.reset(seed=42)
