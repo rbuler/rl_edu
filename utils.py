@@ -76,26 +76,37 @@ def mc_prediction(env,
     return V.copy(), V_track
 
 
+def td(env,
+       pi=None,
+       gamma=1.0,
+       init_alpha=0.5,
+       min_alpha=0.01,
+       alpha_decay_ratio=0.3,
+       n_episodes=500):
+    
+    nS = env.observation.n
+    V = np.zeros(nS)
+    V_track = np.zeros((n_episodes, nS))
+    alphas = decay_schedule(init_alpha, min_alpha,
+                            alpha_decay_ratio, n_episodes)
+    
+    for e in tqdm(range(n_episodes)):
+        truncated = False
+        terminated = False
+        state, info = env.reset(seed=42)
 
+        while not (truncated or terminated):
+            if pi is not None:
+                action = pi(state)  # policy action select
+            else:
+                action = env.action_space.sample()  # random action sample
+            next_state, reward, terminated, truncated, info = env.step(action)
 
+            td_target = reward + gamma * V[next_state] * (1 - terminated)
+            td_error = td_target - V[state]
+            V[state] = V[state] + alphas[e] * td_error
 
+            state = next_state
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        V_track[e] = V
+    return V, V_track
