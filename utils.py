@@ -157,8 +157,46 @@ def ntd(env,
             ntd_error = ntd_target - V[est_state]
             V[est_state] = V[est_state] + alphas[e] * ntd_error
 
-            if len(path) == 1 and path[0][4]:  # if only terminal state in path then
-                path = None                    # set path to none to break episode loop
+            if len(path) == 1 and path[0][4]:  # if only terminal state in path then set path
+                path = None                    # to none to break out of the episode loop
 
+        V_track[e] = V
+    return V, V_track
+
+
+def td_lambda(env,
+              pi=None,
+              gamma=1.0,
+              init_alpha=0.5,
+              min_alpha=0.01,
+              alpha_decay_ratio=0.3,
+              lambda_=0.3,
+              n_episodes=500):
+    
+    nS = env.observation.n
+    V = np.zeros(nS)
+    V_track = np.zeros((n_episodes, nS))
+    E = np.zeros(nS)
+    alphas = decay_schedule(init_alpha, min_alpha,
+                            alpha_decay_ratio, n_episodes)
+
+    for e in tqdm(range(n_episodes)):
+        E.fill(0)
+        truncated = False
+        terminated = False
+        state, info = env.reset(seed=42)
+        while not (truncated or terminated):
+            if pi is not None:
+                action = pi(state)  # policy action select
+            else:
+                action = env.action_space.sample()  # random action sample
+            
+            next_state, reward, terminated, truncated, info = env.step(action)
+            td_target = reward + gamma * V[next_state] * (1 - terminated)
+            td_error = td_target - V[state]
+            E[state] = E[state] + 1
+            V = V + alphas * td_error * E
+            E = gamma * lambda_ * E
+            state = next_state
         V_track[e] = V
     return V, V_track
