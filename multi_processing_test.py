@@ -1,5 +1,6 @@
 import os
 import time
+import math
 import logging
 import numpy as np
 import multiprocessing
@@ -16,17 +17,13 @@ extractor = featureextractor.RadiomicsFeatureExtractor()
 logger_radiomics = logging.getLogger("radiomics")
 logger_radiomics.setLevel(logging.ERROR)
 
+
 def extract_features(image_path, mask_path):
     result = extractor.execute(image_path, mask_path, label=1)
     return result
 
 
-cpu_count = multiprocessing.cpu_count()
-print(cpu_count)
-cpu_count = os.cpu_count()
-print(cpu_count)
-
-n = 10000
+n = 100
 image_paths = [image] * n
 mask_paths = [mask] * n
 num_processes = multiprocessing.cpu_count() - 1
@@ -38,9 +35,9 @@ num_processes = multiprocessing.cpu_count() - 1
 # ~aprox 666 batches
 # 0.031 s/img
 # ---------------------------------------------------
-
-if 0:
-    num_batches = len(image_paths) // num_processes
+if 1:
+    print("\nfor loop batchsize")
+    num_batches = math.ceil(len(image_paths) / num_processes)
 
     start_time = time.time()
     results = []
@@ -52,9 +49,10 @@ if 0:
 
         with Pool(num_processes) as pool:
             results.append(pool.starmap(extract_features, zip(batch_image_paths, batch_mask_paths)))
-
+    
     end_time = time.time()
-    print(end_time - start_time)
+    print(f"{(end_time - start_time) / n:.3f} s/img")
+    print(f"{end_time - start_time:.3f} s\n")
 
 
 # ---------------------------------------------------
@@ -63,8 +61,10 @@ if 0:
 # 15 batches
 # 0.017 s/img
 # ---------------------------------------------------
-if 0:
-    chunk_size = round(len(image_paths) / num_processes)
+if 1:
+    print("for loop chunksize")
+
+    chunk_size = math.ceil(len(image_paths) / num_processes)
     image_chunks = [image_paths[i:i+chunk_size] for i in range(0, len(image_paths), chunk_size)]
     mask_chunks = [mask_paths[i:i+chunk_size] for i in range(0, len(mask_paths), chunk_size)]
 
@@ -75,4 +75,23 @@ if 0:
           results.append(pool.starmap(extract_features, zip(image_chunks[i], mask_chunks[i])))
 
     end_time = time.time()
-    print(end_time - start_time)
+    print(f"{(end_time - start_time) / n:.3f} s/img")
+    print(f"{end_time - start_time:.3f} s\n")
+
+
+# ---------------------------------------------------
+# 10_000 -> 163s
+# 0.0163 s/img
+# ---------------------------------------------------
+if 1:
+    print("no for loop chunksize")
+    start_time = time.time()
+    with Pool(num_processes) as pool:
+        results = pool.starmap(extract_features,
+                               zip(image_paths,
+                                   mask_paths),
+                               chunksize=None) #  if none then chunksize = int(math.ceil(iterable_size / (4 * pool_size)))
+
+    end_time = time.time()
+    print(f"{(end_time - start_time) / n:.3f} s/img")
+    print(f"{end_time - start_time:.3f} s\n")
