@@ -9,7 +9,7 @@ from multiprocessing import Pool
 from radiomics import featureextractor
 
 
-c, h, w = 1, 224, 224
+c, h, w = 1, 600, 450
 image = sitk.GetImageFromArray(np.random.randint(255, size=(h, w)))
 mask = sitk.GetImageFromArray(np.random.randint(2, size=(h, w)))
 extractor = featureextractor.RadiomicsFeatureExtractor()
@@ -20,6 +20,7 @@ logger_radiomics.setLevel(logging.ERROR)
 
 def extract_features(image_path, mask_path):
     result = extractor.execute(image_path, mask_path, label=1)
+    time.sleep(1)
     return result
 
 
@@ -28,6 +29,7 @@ image_paths = [image] * n
 mask_paths = [mask] * n
 num_processes = multiprocessing.cpu_count() - 1
 
+loops = [0, 0, 1]
 
 # ---------------------------------------------------
 # 10_000 -> 310s
@@ -35,7 +37,7 @@ num_processes = multiprocessing.cpu_count() - 1
 # ~aprox 666 batches
 # 0.031 s/img
 # ---------------------------------------------------
-if 1:
+if loops[0]:
     print("\nfor loop batchsize")
     num_batches = math.ceil(len(image_paths) / num_processes)
 
@@ -61,7 +63,7 @@ if 1:
 # 15 batches
 # 0.017 s/img
 # ---------------------------------------------------
-if 1:
+if loops[1]:
     print("for loop chunksize")
 
     chunk_size = math.ceil(len(image_paths) / num_processes)
@@ -83,7 +85,7 @@ if 1:
 # 10_000 -> 163s
 # 0.0163 s/img
 # ---------------------------------------------------
-if 1:
+if loops[2]:
     print("no for loop chunksize")
     start_time = time.time()
     with Pool(num_processes) as pool:
