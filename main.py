@@ -5,10 +5,9 @@ from comet_ml.integration.gymnasium import CometLogger
 
 
 def main():
-
     experiment = Experiment(
-    project_name="rl-edu",
-    workspace="rbuler"
+        project_name="rl-edu",
+        workspace="rbuler"
     )
 
     mode = 'show-only'
@@ -30,7 +29,7 @@ def main():
     episodes = 2
 
     test_metric = 0
-    experiment.log_metric ('test_int', test_metric)
+    experiment.log_metric('test_int', test_metric)
 
     # generate_trajectory(env=env, pi=None, max_steps=1000)
 
@@ -43,10 +42,9 @@ def main():
             observation, reward, terminated, truncated, info = env.step(action)
             env.render()
         test_metric = e
-        experiment.log_metric ('test_int', test_metric)
-    
-    env.close()
+        experiment.log_metric('test_int', test_metric)
 
+    env.close()
 
 
 if __name__ == '__main__':
