@@ -4,31 +4,39 @@ import math
 import logging
 import numpy as np
 import multiprocessing
-import SimpleITK as sitk
 from multiprocessing import Pool
+import SimpleITK as sitk
 from radiomics import featureextractor
 
-
-c, h, w = 1, 600, 450
-image = sitk.GetImageFromArray(np.random.randint(255, size=(h, w)))
-mask = sitk.GetImageFromArray(np.random.randint(2, size=(h, w)))
-extractor = featureextractor.RadiomicsFeatureExtractor()
-
+# Set up logging
 logger_radiomics = logging.getLogger("radiomics")
 logger_radiomics.setLevel(logging.ERROR)
 
+# Define image dimensions
+channels, height, width = 1, 600, 450
 
+# Generate random image and mask
+image = sitk.GetImageFromArray(np.random.randint(255, size=(height, width)))
+mask = sitk.GetImageFromArray(np.random.randint(2, size=(height, width)))
+
+# Initialize feature extractor
+extractor = featureextractor.RadiomicsFeatureExtractor()
+
+# Function to extract features from image and mask
 def extract_features(image_path, mask_path):
     result = extractor.execute(image_path, mask_path, label=1)
     time.sleep(1)
     return result
 
+# Define number of images and paths
+num_images = 100
+image_paths = [image] * num_images
+mask_paths = [mask] * num_images
 
-n = 100
-image_paths = [image] * n
-mask_paths = [mask] * n
+# Define number of processes
 num_processes = multiprocessing.cpu_count() - 1
 
+# Define loops to execute
 loops = [0, 0, 1]
 
 # ---------------------------------------------------
@@ -53,7 +61,7 @@ if loops[0]:
             results.append(pool.starmap(extract_features, zip(batch_image_paths, batch_mask_paths)))
     
     end_time = time.time()
-    print(f"{(end_time - start_time) / n:.3f} s/img")
+    print(f"{(end_time - start_time) / num_images:.3f} s/img")
     print(f"{end_time - start_time:.3f} s\n")
 
 
@@ -74,10 +82,10 @@ if loops[1]:
     results = []
     for i in range(len(image_chunks)):
         with Pool(num_processes) as pool:
-          results.append(pool.starmap(extract_features, zip(image_chunks[i], mask_chunks[i])))
+            results.append(pool.starmap(extract_features, zip(image_chunks[i], mask_chunks[i])))
 
     end_time = time.time()
-    print(f"{(end_time - start_time) / n:.3f} s/img")
+    print(f"{(end_time - start_time) / num_images:.3f} s/img")
     print(f"{end_time - start_time:.3f} s\n")
 
 
@@ -89,11 +97,8 @@ if loops[2]:
     print("no for loop chunksize")
     start_time = time.time()
     with Pool(num_processes) as pool:
-        results = pool.starmap(extract_features,
-                               zip(image_paths,
-                                   mask_paths),
-                               chunksize=None) #  if none then chunksize = int(math.ceil(iterable_size / (4 * pool_size)))
+        results = pool.starmap(extract_features, zip(image_paths, mask_paths), chunksize=None)
 
     end_time = time.time()
-    print(f"{(end_time - start_time) / n:.3f} s/img")
+    print(f"{(end_time - start_time) / num_images:.3f} s/img")
     print(f"{end_time - start_time:.3f} s\n")
