@@ -5,6 +5,8 @@ def decay_schedule(init_value, min_value,
                    decay_ratio, max_steps,
                    log_start=-2, log_base=10):
     
+    """Compute decaying values as specified in the function arguments"""
+
     decay_steps = int(max_steps * decay_ratio)
     rem_steps = max_steps - decay_steps
 
@@ -17,28 +19,55 @@ def decay_schedule(init_value, min_value,
     return values
 
 
-def generate_trajectory(env, pi=None, max_steps=20):
+# def generate_trajectory(env, pi=None, max_steps=20):
+
+#     trajectory = []
+#     truncated = False
+#     terminated = False
+#     state, info = env.reset(seed=42)
+
+#     while not (truncated or terminated):
+#         if pi is not None:
+#             action = pi(state)  # policy action select
+#         else:
+#             action = env.action_space.sample()  # random action sample
+        
+#         next_state, reward, terminated, truncated, info = env.step(action)
+#         experience = (state, action, reward, next_state, terminated, truncated)
+#         trajectory.append(experience)
+
+#         if len(trajectory) >= max_steps:
+#             trajectory = []
+#             break
+#         state = next_state
+#     return trajectory
+
+
+def generate_trajectory(select_action, Q,
+                        epsilon, env, max_steps=20):
+
+    """Roll out the policy in the environment for a full episode"""
 
     trajectory = []
     truncated = False
     terminated = False
-    state, info = env.reset(seed=42)
+    state, _ = env.reset(seed=42)
 
     while not (truncated or terminated):
-        if pi is not None:
-            action = pi(state)  # policy action select
-        else:
-            action = env.action_space.sample()  # random action sample
-        
-        next_state, reward, terminated, truncated, info = env.step(action)
+        action = select_action(state, Q, epsilon)
+
+        next_state, reward, terminated, truncated, _ = env.step(action)
         experience = (state, action, reward, next_state, terminated, truncated)
         trajectory.append(experience)
+
+        if terminated:
+            break
 
         if len(trajectory) >= max_steps:
             trajectory = []
             break
         state = next_state
-    return trajectory
+    return np.array(trajectory, np.object)
 
 
 def mc_prediction(env,
