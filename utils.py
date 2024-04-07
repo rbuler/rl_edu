@@ -65,7 +65,9 @@ def generate_trajectory(select_action, Q,
 
         if len(trajectory) >= max_steps:
             trajectory = []
+            state, _ = env.reset(seed=42)
             break
+        
         state = next_state
     return np.array(trajectory, np.object)
 
