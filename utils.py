@@ -72,6 +72,9 @@ def generate_trajectory(select_action, Q,
     return np.array(trajectory, np.object)
 
 
+# Prediction algorithms
+
+
 def mc_prediction(env,
                   pi=None,
                   gamma=1.0,
@@ -105,54 +108,6 @@ def mc_prediction(env,
 
         V_track[e] = V
     return V.copy(), V_track
-
-
-def mc_control(env, gamma=1.0,
-               init_alpha=0.5,
-               min_alpha=0.01,
-               alpha_decay_ratio=0.5,
-               init_epsilon=1.0,
-               min_epsilon=0.1,
-               epsilon_decay_ratio=0.9,
-               n_episodes=3000,
-               max_steps=200,
-               first_visit=True):
-    
-    nS, nA = env.observation_space.n, env.action_space.n
-
-    discounts = np.logspace(0, max_steps, num=max_steps,
-                            base=gamma, endpoint=False)
-    alphas = decay_schedule(init_alpha, min_alpha,
-                            alpha_decay_ratio, n_episodes)
-    
-    epsilons = decay_schedule(init_epsilon, min_epsilon,
-                              epsilon_decay_ratio, n_episodes)
-    
-    pi_track = []
-    Q = np.zeros((nS, nA), dtype=np.float64)
-    Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float64)
-    
-    select_action = lambda state, Q, epsilon: np.argmax(Q[state]) \
-        if np.random.rand() > epsilon else np.random.choice(nA)
-
-    for e in tqdm(range(n_episodes)):
-        trajectory = generate_trajectory(select_action, Q,
-                                         epsilons[e], env, max_steps)
-        visited = np.zeros((nS, nA), dtype=np.bool_)
-        
-        for t, (state, action, reward, _, _, _) in enumerate(trajectory):
-            if visited[state][action] and first_visit:
-                continue
-            visited[state][action] = True
-            n_steps = len(trajectory[t:])
-            G = np.sum(discounts[:n_steps] * trajectory[t:, 2])
-            Q[state][action] = Q[state][action] + alphas * (G - Q[state][action])
-
-        Q_track[e] = Q
-        pi_track.append(np.argmax(Q, axis=1))
-    V = np.max(Q, axis=1)
-    pi = lambda s: {s:a for s, a in enumerate(pi_track[-1])}[s]
-    return Q, V, pi, Q_track, pi_track
 
 
 def td(env,
@@ -279,3 +234,102 @@ def td_lambda(env,
             state = next_state
         V_track[e] = V
     return V, V_track
+
+
+# Control algorithms
+
+
+def mc_control(env, gamma=1.0,
+               init_alpha=0.5,
+               min_alpha=0.01,
+               alpha_decay_ratio=0.5,
+               init_epsilon=1.0,
+               min_epsilon=0.1,
+               epsilon_decay_ratio=0.9,
+               n_episodes=3000,
+               max_steps=200,
+               first_visit=True):
+    
+    nS, nA = env.observation_space.n, env.action_space.n
+
+    discounts = np.logspace(0, max_steps, num=max_steps,
+                            base=gamma, endpoint=False)
+    alphas = decay_schedule(init_alpha, min_alpha,
+                            alpha_decay_ratio, n_episodes)
+    
+    epsilons = decay_schedule(init_epsilon, min_epsilon,
+                              epsilon_decay_ratio, n_episodes)
+    
+    pi_track = []
+    Q = np.zeros((nS, nA), dtype=np.float64)
+    Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float64)
+    
+    select_action = lambda state, Q, epsilon: np.argmax(Q[state]) \
+        if np.random.rand() > epsilon else np.random.choice(nA)
+
+    for e in tqdm(range(n_episodes)):
+        trajectory = generate_trajectory(select_action, Q,
+                                         epsilons[e], env, max_steps)
+        visited = np.zeros((nS, nA), dtype=np.bool_)
+        
+        for t, (state, action, reward, _, _, _) in enumerate(trajectory):
+            if visited[state][action] and first_visit:
+                continue
+            visited[state][action] = True
+            n_steps = len(trajectory[t:])
+            G = np.sum(discounts[:n_steps] * trajectory[t:, 2])
+            Q[state][action] = Q[state][action] + alphas[e] * (G - Q[state][action])
+
+        Q_track[e] = Q
+        pi_track.append(np.argmax(Q, axis=1))
+    V = np.max(Q, axis=1)
+    pi = lambda s: {s:a for s, a in enumerate(pi_track[-1])}[s]
+    return Q, V, pi, Q_track, pi_track
+
+
+def sarsa(env,
+          gamma=1.0,
+          init_alpha=0.5,
+          min_alpha=0.01,
+          alpha_decay_ratio=0.5,
+          init_epsilon=1.0,
+          min_epsilon=0.1,
+          epsilon_decay_ratio=0.9,
+          n_episodes=3000):
+
+    nS, nA = env.observation_space.n, env.action_space.n
+    pi_track = []
+
+    Q = np.zeros((nS, nA), dtype=np.float64)
+    Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float64)
+    
+    select_action = lambda state, Q, epsilon: np.argmax(Q[state]) \
+        if np.random.rand() > epsilon else np.random.choice(nA)
+
+    alphas = decay_schedule(init_alpha, min_alpha,
+                            alpha_decay_ratio, n_episodes)
+    epsilons = decay_schedule(init_epsilon, min_epsilon,
+                              epsilon_decay_ratio, n_episodes)
+    
+    for e in tqdm(range(n_episodes)):
+        truncated = False
+        terminated = False
+        state, _ = env.reset(seed=42)
+        action = select_action(state, Q, epsilons[e])
+
+        while not (truncated or terminated):
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            next_action = select_action(next_state, Q, epsilons[e])
+
+            td_target = reward + gamma * Q[next_state][next_action] * (1 - terminated)
+            td_error = td_target - Q[state][action]
+            Q[state][action] = Q[state][action] + alphas[e] * td_error
+
+            state, action = next_state, next_action
+
+        Q_track[e] = Q
+        pi_track.append(np.argmax(Q, axis=1))
+    V = np.max(Q, axis=1)
+    pi = lambda s: {s:a for s, a in enumerate(pi_track[-1])}[s]
+    return Q, V, pi, Q_track, pi_track
+
