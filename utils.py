@@ -379,3 +379,54 @@ def q_learning(env,
     pi = lambda s: {s:a for s, a in enumerate(pi_track[-1])}[s]
     return Q, V, pi, Q_track, pi_track
     
+
+def double_q_learning(env,
+                      gamma=1.0,
+                      init_alpha=0.5,
+                      min_alpha=0.01,
+                      alpha_decay_ratio=0.5,
+                      init_epsilon=1.0,
+                      min_epsilon=0.1,
+                      epsilon_decay_ratio=0.9,
+                      n_episodes=3000):
+
+    nS, nA = env.observation_space.n, env.action_space.n
+    pi_track = []
+
+    Q1 = np.zeros((nS, nA), dtype=np.float64)
+    Q2 = np.zeros((nS, nA), dtype=np.float64)
+    Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float64)
+
+    select_action = lambda state, Q1, Q2, epsilon: np.argmax(Q1[state] + Q2[state]) \
+        if np.random.rand() > epsilon else np.random.choice(nA)
+    
+    alphas = decay_schedule(init_alpha, min_alpha,
+                            alpha_decay_ratio, n_episodes)
+    epsilons = decay_schedule(init_epsilon, min_epsilon,
+                              epsilon_decay_ratio, n_episodes)
+    
+    for e in tqdm(range(n_episodes)):
+        truncated = False
+        terminated = False
+        state, _ = env.reset(seed=42)
+
+        while not (truncated or terminated):
+            action = select_action(state, Q1, Q2, epsilons[e])
+            next_state, reward, terminated, truncated, _ = env.step(action)
+
+            if np.random.rand() < 0.5:
+                td_target = reward + gamma * Q2[next_state].max() * (1 - terminated)
+                td_error = td_target - Q1[state][action]
+                Q1[state][action] = Q1[state][action] + alphas[e] * td_error
+            else:
+                td_target = reward + gamma * Q1[next_state].max() * (1 - terminated)
+                td_error = td_target - Q2[state][action]
+                Q2[state][action] = Q2[state][action] + alphas[e] * td_error
+
+            state = next_state
+
+        Q_track[e] = Q1 + Q2
+        pi_track.append(np.argmax(Q1 + Q2, axis=1))
+    V = np.max(Q1 + Q2, axis=1)
+    pi = lambda s: {s:a for s, a in enumerate(pi_track[-1])}[s]
+    return Q1, V, pi, Q_track, pi_track
