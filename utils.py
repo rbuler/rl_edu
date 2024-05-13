@@ -12,8 +12,9 @@ def decay_schedule(init_value, min_value,
 
     values = np.logspace(log_start, 0, decay_steps,
                          base=log_base, endpoint=True)[::-1]
-    
-    values = (values - values.min()) / (values.max() - values.min())
+    eps = 1e-8
+    if values.max() - values.min() > eps:
+        values = (values - values.min()) / (values.max() - values.min())
     values = (init_value - min_value) * values + min_value
     values = np.pad(values, (0, rem_steps), 'edge')
     return values
@@ -118,13 +119,12 @@ def td(env,
        alpha_decay_ratio=0.3,
        n_episodes=500):
     
-    nS = env.observation.n
+    nS = env.observation_space.n
     V = np.zeros(nS)
     V_track = np.zeros((n_episodes, nS))
     alphas = decay_schedule(init_alpha, min_alpha,
                             alpha_decay_ratio, n_episodes)
-    
-    for e in tqdm(range(n_episodes)):
+    for e in range(n_episodes):
         truncated = False
         terminated = False
         state, info = env.reset(seed=42)
