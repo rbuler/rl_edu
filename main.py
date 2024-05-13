@@ -2,10 +2,12 @@ import gymnasium as gym
 from comet_ml import Experiment
 from comet_ml.integration.gymnasium import CometLogger
 from utils import mc_prediction, td, ntd, td_lambda
+from utils import mc_control, sarsa, q_learning, double_q_learning
 
 
 def main():
     # environment = 'LunarLander-v2'
+    # environment = 'FrozenLake-v1'
     environment = 'FrozenLake-v1'
     mode = 'show-only'
 
@@ -32,8 +34,23 @@ def main():
     if experiment is not None:
         experiment.log_metric('test_int', test_metric)
 
-    V, V_track = td(env, n_episodes=5)
+    # READY     mc_prediction, td, ntd, td_lambda, mc_control, sarsa, q_learning, double_q_learning
+    # TODO      dqn, a2c, ppo, ddpg, sac, trpo, her 
 
+
+
+    # prediction problem
+    if 0:
+        V, V_track = mc_prediction(env, n_episodes=10)
+
+    # control problem
+    if 1:
+        Q, V, pi, Q_track, pi_track = mc_control(env, n_episodes=3000)
+        print(Q)
+        print(V)
+        print(pi)
+        print(Q_track)
+        print(pi_track)
 
 if __name__ == '__main__':
     main()
