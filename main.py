@@ -40,11 +40,15 @@ def main():
 
 
     # prediction problem
-    if 0:
-        V, V_track = mc_prediction(env, n_episodes=10)
+    if 1:
+        def pi(s):
+            actions = [0, 3, 0, 0, 0, 0, 2, 0, 3, 1, 0, 0, 0, 2, 1, 0]
+            return actions[s]
+        # pi = None
+        V, V_track = mc_prediction(env, pi=pi, n_episodes=10)
 
     # control problem
-    if 1:
+    if 0:
         Q, V, pi, Q_track, pi_track = mc_control(env, n_episodes=3000)
         print(Q)
         print(V)
