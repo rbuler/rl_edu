@@ -5,6 +5,11 @@ from utils import mc_prediction, td, ntd, td_lambda
 from utils import mc_control, sarsa, q_learning, double_q_learning
 
 
+def pi(s):
+    actions = [0, 3, 0, 0, 0, 0, 2, 0, 3, 1, 0, 0, 0, 2, 1, 0]
+    return actions[s]
+
+
 def main():
     # environment = 'LunarLander-v2'
     # environment = 'FrozenLake-v1'
@@ -38,13 +43,8 @@ def main():
     # TODO      dqn, a2c, ppo, ddpg, sac, trpo, her 
 
 
-
     # prediction problem
     if 1:
-        def pi(s):
-            actions = [0, 3, 0, 0, 0, 0, 2, 0, 3, 1, 0, 0, 0, 2, 1, 0]
-            return actions[s]
-        # pi = None
         V, V_track = mc_prediction(env, pi=pi, n_episodes=10)
 
     # control problem
